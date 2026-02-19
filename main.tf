@@ -89,110 +89,143 @@ resource "aws_instance" "web" {
   security_groups             = [aws_security_group.sg.id]
   associate_public_ip_address = true
 
- user_data = <<-EOF
-              #!/bin/bash
-              dnf install nginx -y
-              systemctl start nginx
-              systemctl enable nginx
+user_data = <<-EOF
+#!/bin/bash
 
-              # Get IMDSv2 token
-              TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" \
-              -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+dnf install -y nginx
+systemctl enable nginx
+systemctl start nginx
 
-              # Fetch instance metadata
-              INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" \
-              http://169.254.169.254/latest/meta-data/instance-id)
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+-H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 
-              REGION=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" \
-              http://169.254.169.254/latest/meta-data/placement/region)
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+http://169.254.169.254/latest/meta-data/instance-id)
 
-              PUBLIC_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" \
-              http://169.254.169.254/latest/meta-data/public-ipv4)
+REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+http://169.254.169.254/latest/meta-data/placement/region)
 
-              # Create custom HTML page
-              cat <<EOT > /usr/share/nginx/html/index.html
-              <!DOCTYPE html>
-              <html>
-              <head>
-                  <meta charset="UTF-8">
-                  <title>Terraform AWS Infrastructure</title>
-                  <style>
-                      body {
-                          font-family: Arial, sans-serif;
-                          background: linear-gradient(135deg, #0f172a, #1e293b);
-                          color: #f1f5f9;
-                          text-align: center;
-                          padding: 40px;
-                      }
-                      h1 {
-                          color: #38bdf8;
-                          animation: glow 2s ease-in-out infinite alternate;
-                      }
-                      @keyframes glow {
-                          from { text-shadow: 0 0 5px #38bdf8; }
-                          to { text-shadow: 0 0 20px #38bdf8; }
-                      }
-                      .box {
-                          background: #1e293b;
-                          padding: 20px;
-                          margin: 20px auto;
-                          border-radius: 12px;
-                          width: 70%;
-                          box-shadow: 0 0 15px rgba(0,0,0,0.5);
-                      }
-                      a {
-                          color: #38bdf8;
-                          text-decoration: none;
-                      }
-                      img {
-                          width: 80%;
-                          border-radius: 10px;
-                          margin-top: 20px;
-                      }
-                  </style>
-              </head>
-              <body>
+PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+http://169.254.169.254/latest/meta-data/public-ipv4)
 
-                  <h1>🚀 Terraform AWS Infrastructure</h1>
-                  <p>Provisioned using Infrastructure as Code</p>
+tee /usr/share/nginx/html/index.html > /dev/null <<HTML
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Terraform AWS Infrastructure</title>
 
-                  <div class="box">
-                      <h2>📊 Instance Metadata</h2>
-                      <p><strong>Instance ID:</strong> $INSTANCE_ID</p>
-                      <p><strong>Region:</strong> $REGION</p>
-                      <p><strong>Public IP:</strong> $PUBLIC_IP</p>
-                  </div>
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #f1f5f9;
+  text-align: center;
+  padding: 40px;
+}
 
-                  <div class="box">
-                      <h2>🏗 Infrastructure Components</h2>
-                      <ul style="text-align:left;">
-                          <li>Custom VPC (10.0.0.0/16)</li>
-                          <li>Public Subnet</li>
-                          <li>Internet Gateway</li>
-                          <li>Route Table Association</li>
-                          <li>Security Group</li>
-                          <li>EC2 with Nginx</li>
-                          <li>S3 Remote Backend with Lockfile</li>
-                      </ul>
-                  </div>
+/* Glow animation */
+@keyframes glow {
+  from { text-shadow: 0 0 5px #38bdf8; }
+  to { text-shadow: 0 0 20px #38bdf8, 0 0 30px #38bdf8; }
+}
 
-                  <div class="box">
-                      <h2>🔗 Project Links</h2>
-                      <p><a href="https://github.com/YOUR_GITHUB_USERNAME/terraform-aws-lab" target="_blank">GitHub Repository</a></p>
-                      <p><a href="https://www.linkedin.com/in/YOUR_LINKEDIN" target="_blank">LinkedIn Profile</a></p>
-                  </div>
+h1 {
+  font-size: 42px;
+  color: #38bdf8;
+  animation: glow 2s ease-in-out infinite alternate;
+}
 
-                  <div class="box">
-                      <h2>🖼 Architecture Diagram</h2>
-                      <img src="https://d1.awsstatic.com/architecture-diagrams/ArchitectureDiagrams/web-application-architecture.8a4b16d7b9e5e8b7e03a8c6b0c4b4e0f.png" alt="Architecture Diagram">
-                  </div>
+/* Card styling */
+.box {
+  background: #1e293b;
+  padding: 25px;
+  margin: 25px auto;
+  border-radius: 15px;
+  width: 65%;
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  transition: transform 0.3s ease;
+}
 
-                  <p>Built by Chaitrali 🚀</p>
+.box:hover {
+  transform: scale(1.02);
+}
 
-              </body>
-              </html>
-              EOT
-              EOF
+/* Buttons */
+.button {
+  display: inline-block;
+  padding: 12px 20px;
+  margin: 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  background: #0ea5e9;
+  color: white;
+  box-shadow: 0 0 10px #0ea5e9;
+  transition: 0.3s ease;
+}
+
+.button:hover {
+  background: #38bdf8;
+  box-shadow: 0 0 20px #38bdf8;
+}
+
+/* Badge glow */
+.badge {
+  display: inline-block;
+  padding: 8px 14px;
+  margin: 8px;
+  border-radius: 20px;
+  background: #334155;
+  box-shadow: 0 0 10px #22d3ee;
+  transition: 0.3s ease;
+}
+
+.badge:hover {
+  box-shadow: 0 0 20px #22d3ee;
+  transform: scale(1.1);
+}
+</style>
+</head>
+
+<body>
+
+<h1>Terraform AWS Infrastructure 🚀</h1>
+<p>Provisioned using Infrastructure as Code</p>
+
+<div class="box">
+<h2>Technology Stack</h2>
+<div class="badge">Terraform</div>
+<div class="badge">AWS</div>
+<div class="badge">S3 Backend</div>
+<div class="badge">EC2</div>
+<div class="badge">Nginx</div>
+</div>
+
+<div class="box">
+<h2>Infrastructure Workflow</h2>
+<p>🖥 Local Machine → Terraform</p>
+<p>☁ S3 Remote Backend (State + Lockfile)</p>
+<p>🌐 Custom VPC & Networking</p>
+<p>🚀 EC2 Instance Created</p>
+<p>🌍 Nginx Web Server Running</p>
+</div>
+
+<div class="box">
+<h2>Connect With Me</h2>
+<a class="button" href="https://github.com/chaitraliawasare/terraform-was-infrastructure-lab" target="_blank">GitHub</a>
+<a class="button" href="https://www.linkedin.com/in/chaitrali-awasare" target="_blank">LinkedIn</a>
+</div>
+
+<p style="margin-top:40px;">Built by Chaitrali 💻✨</p>
+
+</body>
+</html>
+HTML
+
+EOF
+
 
 
   tags = {
